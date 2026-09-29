@@ -4,7 +4,7 @@ using Quetzal.Application.DTOs;
 using Quetzal.Application.Servicos.Interfaces;
 using Quetzal.Domain.Entidades;
 using Quetzal.Domain.Interfaces;
-
+using Quetzal.Application.Utilitarios;
 namespace Quetzal.Application.Servicos.Implementacoes
 {
     public class ProjetoCServico : IProjetoCServico
@@ -134,7 +134,7 @@ namespace Quetzal.Application.Servicos.Implementacoes
                     .Select((foto, indice) => new ProjetoCFoto
                     {
                         ProjetoC = projetoC,
-                        Foto = foto,
+                        Foto = ProcessadorImagem.ReduzirImagemBase64(foto),
                         Ordem = indice + 1
                     })
                     .ToList();
@@ -287,8 +287,13 @@ namespace Quetzal.Application.Servicos.Implementacoes
                         new ProjetoCFoto
                         {
                             ProjetoCId = projetoCExistente.Id,
+<<<<<<< HEAD
                             Foto = novaFoto,
                             Ordem = ordem++
+=======
+                            Foto = ProcessadorImagem.ReduzirImagemBase64(novasFotos[i]),
+                            Ordem = i + 1
+>>>>>>> 3389567ab67d36a62bdc222ec25e4c880aae4f64
                         });
                 }
 

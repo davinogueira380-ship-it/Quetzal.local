@@ -43,7 +43,11 @@ public class Program
 
         builder.Services.AddHttpClient("QuetzalAPI", client =>
         {
+<<<<<<< HEAD
             client.BaseAddress = new Uri(apiBaseUrl);
+=======
+            client.BaseAddress = new Uri(builder.Configuration["ApiConfiguracoes:UrlBase"] ?? "app-quetzal-api-gch4cgdsdnethcg6.brazilsouth-01.azurewebsites.net");
+>>>>>>> 3389567ab67d36a62bdc222ec25e4c880aae4f64
         })
             // Ignora validacao de certificado SSL apenas para ambiente de desenvolvimento local
             .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler

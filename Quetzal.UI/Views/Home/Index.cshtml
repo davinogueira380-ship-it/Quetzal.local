@@ -39,6 +39,7 @@
 @{
     ViewData["Title"] = "Início";
 
+<<<<<<< HEAD
     // Retorna TODAS as fotos já no formato correto para o navegador.
     List<string> FotosDoPortfolio(PortfolioViewModel p)
     {
@@ -61,7 +62,43 @@
 
         return new List<string>();
     }
+=======
+    // Fotos de um portfólio, por Ordem; cai para ImagemUpload em registros antigos.
+    // List<string> FotosDoPortfolio(PortfolioViewModel p) =>
+    //     p.FotosSelecionadas.Any()
+    //         ? p.FotosSelecionadas.OrderBy(f => f.Ordem).Select(f => f.Foto).ToList()
+    //         : (!string.IsNullOrWhiteSpace(p.ImagemUpload) ? new List<string> { p.ImagemUpload! } : new List<string>());
+
+    // Fotos de um portfólio, por Ordem; cai para ImagemUpload em registros antigos.
+
+// trecho acima foi alterado 29-09 para reduzir foto 
+
+    List<string> FotosDoPortfolio(PortfolioViewModel p) =>
+        p.FotosSelecionadas.Any()
+            ? p.FotosSelecionadas
+                .OrderBy(f => f.Ordem)
+                .Select(f =>
+                    f.Foto.StartsWith("data:image", StringComparison.OrdinalIgnoreCase)
+                        ? f.Foto
+                        : $"data:image/jpeg;base64,{f.Foto}")
+                .ToList()
+            : (!string.IsNullOrWhiteSpace(p.ImagemUpload)
+                ? new List<string> { p.ImagemUpload! }
+                : new List<string>());
+
+
+
+
+
+
+
+
+
+>>>>>>> 3389567ab67d36a62bdc222ec25e4c880aae4f64
 }
+
+
+
 @* <head>
     <link rel="stylesheet" href="~/css/site-publico.css">
 </head> *@

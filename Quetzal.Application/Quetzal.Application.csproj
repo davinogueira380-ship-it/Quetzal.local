@@ -9,6 +9,7 @@
 	<ItemGroup>
 		<PackageReference Include="AutoMapper" Version="16.2.0" />
 		<PackageReference Include="FluentValidation" Version="12.1.1" />
+		<PackageReference Include="SkiaSharp" Version="4.153.0" />
 	</ItemGroup>
 
 	<ItemGroup>

@@ -1,4 +1,5 @@
 @model PortfolioPorAmbienteViewModel
+
 @{
     ViewData["Title"] = Model.AmbienteNome;
 }
@@ -8,6 +9,7 @@
 
         <div class="apresentacao">
             <h2>@Model.AmbienteNome</h2>
+
             @if (!string.IsNullOrWhiteSpace(Model.AmbienteDescricao))
             {
                 <p>@Model.AmbienteDescricao</p>
@@ -16,7 +18,9 @@
 
         @if (!Model.Itens.Any())
         {
-            <p class="text-center py-5">Ainda não há projetos publicados para este ambiente.</p>
+            <p class="text-center py-5">
+                Ainda não há projetos publicados para este ambiente.
+            </p>
         }
         else
         {
@@ -27,74 +31,116 @@
 
                 <ul>
                     <li>
+
                         @if (par)
                         {
                             <div class="row gy-4 Projeto1">
+
                                 <div class="col-12 col-lg-6">
+
                                     @if (item.FotosSelecionadas.Any())
                                     {
                                         <div class="portfolio-fotos">
-                                            @foreach (var foto in item.FotosSelecionadas.OrderBy(f => f.Ordem))
+
+                                            @foreach (var foto in item.FotosSelecionadas
+                                                .OrderBy(f => f.Ordem))
                                             {
-                                                <img src="@foto.Foto" alt="@item.NomeProjeto" loading="lazy">
+                                                var fotoUrl = foto.Foto.StartsWith(
+                                                    "data:image",
+                                                    StringComparison.OrdinalIgnoreCase)
+                                                        ? foto.Foto
+                                                        : $"data:image/jpeg;base64,{foto.Foto}";
+
+                                                <img src="@fotoUrl"
+                                                     alt="@item.NomeProjeto"
+                                                     loading="lazy">
                                             }
+
                                         </div>
                                     }
                                     else if (!string.IsNullOrWhiteSpace(item.ImagemUpload))
                                     {
-                                        <img src="@item.ImagemUpload" alt="@item.NomeProjeto">
+                                        <img src="@item.ImagemUpload"
+                                             alt="@item.NomeProjeto">
                                     }
                                     else
                                     {
                                         <div class="imagem-placeholder">
                                             <span class="icone">🖼️</span>
-                                            <span class="texto">Foto em breve</span>
+                                            <span class="texto">
+                                                Foto em breve
+                                            </span>
                                         </div>
                                     }
+
                                 </div>
 
                                 <div class="col-12 col-lg-6">
+
                                     <div class="texto1">
                                         <h1>@item.NomeProjeto</h1>
                                         <p>@item.Descricao</p>
                                     </div>
+
                                 </div>
+
                             </div>
                         }
                         else
                         {
                             <div class="row gy-4 Projeto2">
+
                                 <div class="col-12 col-lg-6 order-2 order-lg-1">
+
                                     <div class="texto2">
                                         <h1>@item.NomeProjeto</h1>
                                         <p>@item.Descricao</p>
                                     </div>
+
                                 </div>
 
                                 <div class="col-12 col-lg-6 order-1 order-lg-2">
+
                                     @if (item.FotosSelecionadas.Any())
                                     {
                                         <div class="portfolio-fotos">
-                                            @foreach (var foto in item.FotosSelecionadas.OrderBy(f => f.Ordem))
+
+                                            @foreach (var foto in item.FotosSelecionadas
+                                                .OrderBy(f => f.Ordem))
                                             {
-                                                <img src="@foto.Foto" alt="@item.NomeProjeto" loading="lazy">
+                                                var fotoUrl = foto.Foto.StartsWith(
+                                                    "data:image",
+                                                    StringComparison.OrdinalIgnoreCase)
+                                                        ? foto.Foto
+                                                        : $"data:image/jpeg;base64,{foto.Foto}";
+
+                                                <img src="@fotoUrl"
+                                                     alt="@item.NomeProjeto"
+                                                     loading="lazy">
                                             }
+
                                         </div>
                                     }
                                     else if (!string.IsNullOrWhiteSpace(item.ImagemUpload))
                                     {
-                                        <img src="@item.ImagemUpload" alt="@item.NomeProjeto">
+                                        <img src="@item.ImagemUpload"
+                                             alt="@item.NomeProjeto">
                                     }
                                     else
                                     {
                                         <div class="imagem-placeholder">
                                             <span class="icone">🖼️</span>
-                                            <span class="texto">Foto em breve</span>
+                                            <span class="texto">
+                                                Foto em breve
+                                            </span>
                                         </div>
                                     }
+
                                 </div>
+
                             </div>
                         }
+
                     </li>
                 </ul>
             }
