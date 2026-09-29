@@ -39,7 +39,7 @@ namespace Quetzal.UI.ViewModels
         public List<ProjetoCFotoEdicaoViewModel> FotosExistentes { get; set; } = new();
 
         // Fotos existentes que continuarão vinculadas após o salvar.
-        public List<string> FotosExistentesSelecionadas { get; set; } = new();
+        public List<int> FotosExistentesSelecionadas { get; set; } = new();
 
         // Novos arquivos escolhidos no formulário.
         public List<IFormFile>? FotosArquivos { get; set; }

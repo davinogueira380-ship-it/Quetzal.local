@@ -151,14 +151,19 @@ namespace Quetzal.UI.Areas.Admin.Controllers
                 Nome = dados.Nome,
                 Descricao = dados.Descricao,
                 UsuarioId = dados.UsuarioId,
+
                 ClienteNome = string.IsNullOrWhiteSpace(dados.UsuarioNome)
-                    ? "(sem nome cadastrado)"
-                    : dados.UsuarioNome,
+                            ? "(sem nome cadastrado)"
+                            : dados.UsuarioNome,
+
                 ImagemAtualUrl = dados.ImagemUpload,
+
                 FotosExistentes = fotosExistentes,
+
                 FotosExistentesSelecionadas = fotosExistentes
-                    .Select(f => f.Foto)
-                    .ToList()
+                         .Where(f => f.Id > 0)
+                         .Select(f => f.Id)
+                         .ToList()
             };
 
             await PreencherClientes(viewModel);
@@ -170,26 +175,23 @@ namespace Quetzal.UI.Areas.Admin.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Editar(
-            int id,
-            ProjetoCEdicaoViewModel viewModel)
+       int id,
+           ProjetoCEdicaoViewModel viewModel)
         {
             if (!ModelState.IsValid)
             {
                 await PreencherClientes(viewModel);
                 await PreencherFotosExistentes(viewModel, id);
+
                 return View(viewModel);
             }
 
-            var fotosFinais = new List<string>();
+            // --------------------------------------------------------
+            // SALVAR SOMENTE AS NOVAS FOTOS
+            // --------------------------------------------------------
 
-            // Fotos existentes que permanecerão no projeto.
-            fotosFinais.AddRange(
-                (viewModel.FotosExistentesSelecionadas ?? new List<string>())
-                    .Where(f => !string.IsNullOrWhiteSpace(f))
-                    .Distinct());
-
-            // Novas fotos enviadas agora.
-            var resultadoFotos = await SalvarFotosAsync(viewModel.FotosArquivos);
+            var resultadoFotos =
+                await SalvarFotosAsync(viewModel.FotosArquivos);
 
             if (!resultadoFotos.Sucesso)
             {
@@ -199,10 +201,13 @@ namespace Quetzal.UI.Areas.Admin.Controllers
 
                 await PreencherClientes(viewModel);
                 await PreencherFotosExistentes(viewModel, id);
+
                 return View(viewModel);
             }
 
-            fotosFinais.AddRange(resultadoFotos.Fotos);
+            // --------------------------------------------------------
+            // MONTAR DTO
+            // --------------------------------------------------------
 
             var dto = new AtualizarProjetoCApiModelo
             {
@@ -210,22 +215,48 @@ namespace Quetzal.UI.Areas.Admin.Controllers
                 Nome = viewModel.Nome,
                 Descricao = viewModel.Descricao,
                 UsuarioId = viewModel.UsuarioId ?? string.Empty,
-                Fotos = fotosFinais
+
+                // IDs das fotos que já existem e devem permanecer.
+                FotosExistentesIds =
+                    viewModel.FotosExistentesSelecionadas?
+                        .Distinct()
+                        .ToList()
+                    ?? new List<int>(),
+
+                // Somente as fotos novas adicionadas nesta edição.
+                NovasFotos =
+                    resultadoFotos.Fotos
+                        .Where(f => !string.IsNullOrWhiteSpace(f))
+                        .Distinct()
+                        .ToList()
             };
 
-            var resposta = await _api.PutAsync<ProjetoCApiModelo, AtualizarProjetoCApiModelo>(
-                $"api/ProjetoC/{id}/atualizar",
-                dto);
+            // --------------------------------------------------------
+            // ENVIAR PARA API
+            // --------------------------------------------------------
+
+            var resposta =
+                await _api.PutAsync<
+                    ProjetoCApiModelo,
+                    AtualizarProjetoCApiModelo>(
+                        $"api/ProjetoC/{id}/atualizar",
+                        dto);
 
             if (!resposta.Sucesso)
             {
-                AdicionarErrosDaApi(resposta.Erros, MensagemDeErro(resposta));
+                AdicionarErrosDaApi(
+                    resposta.Erros,
+                    MensagemDeErro(resposta));
+
                 await PreencherClientes(viewModel);
                 await PreencherFotosExistentes(viewModel, id);
+
                 return View(viewModel);
             }
 
-            TempData["MensagemSucesso"] = "Projeto atualizado com sucesso!";
+            TempData["MensagemSucesso"] =
+                "Projeto atualizado com sucesso!";
+
             return RedirectToAction(nameof(Index));
         }
 
@@ -415,9 +446,21 @@ namespace Quetzal.UI.Areas.Admin.Controllers
             public bool Ativo { get; set; } = true;
         }
 
-        public class AtualizarProjetoCApiModelo : CriarProjetoCApiModelo
+        public class AtualizarProjetoCApiModelo
         {
             public int Id { get; set; }
+
+            public string Nome { get; set; } = string.Empty;
+
+            public string Descricao { get; set; } = string.Empty;
+
+            public string UsuarioId { get; set; } = string.Empty;
+
+            // IDs das fotos que JÁ EXISTEM e devem continuar.
+            public List<int> FotosExistentesIds { get; set; } = new();
+
+            // Apenas fotos realmente novas.
+            public List<string> NovasFotos { get; set; } = new();
         }
 
         public class UsuarioApiModelo

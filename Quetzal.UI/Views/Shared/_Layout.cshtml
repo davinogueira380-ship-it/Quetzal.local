@@ -24,15 +24,15 @@
             <div class="container">
 
                 <!-- LOGO -->
-            <div class="LogoNav">
-                <a asp-area="" asp-controller="Home" asp-action="Index">
-                    <img src="~/img/logo.png" alt="Quetzal Logo">
-                </a>
-            </div>
+                <div class="LogoNav">
+                    <a asp-area="" asp-controller="Home" asp-action="Index">
+                        <img src="~/img/logo.png" alt="Quetzal Logo">
+                    </a>
+                </div>
 
                 <!-- BOTÃO HAMBÚRGUER -->
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#menuNavegacao"
-                    aria-controls="menuNavegacao" aria-expanded="false" aria-label="Abrir menu">
+                        aria-controls="menuNavegacao" aria-expanded="false" aria-label="Abrir menu">
                     <span class="navbar-toggler-icon"></span>
                 </button>
 
@@ -50,7 +50,10 @@
                             {
                                 <li><a asp-area="Admin" asp-controller="Dashboard" asp-action="Index">Dashboard</a></li>
                             }
-                            else if (User.IsInRole("Cliente") || User.IsInRole("Usuario"))
+                            else if (
+                                (User.IsInRole("Cliente") || User.IsInRole("Usuario")) &&
+                                bool.TryParse(User.FindFirst("Ativo")?.Value, out var usuarioAtivo) &&
+                                usuarioAtivo)
                             {
                                 <li><a asp-area="Cliente" asp-controller="MeuProjeto" asp-action="Index">Minha área</a></li>
                             }

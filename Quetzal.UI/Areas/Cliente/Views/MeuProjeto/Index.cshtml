@@ -1,4 +1,38 @@
 @model MeuProjetoViewModel
+
+@functions {
+    string ObterSrcImagem(string? imagem)
+    {
+        if (string.IsNullOrWhiteSpace(imagem))
+            return "";
+
+        imagem = imagem.Trim();
+
+        // Se já vier pronta no formato data:image/...;base64,...
+        if (imagem.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+            return imagem;
+
+        // JPEG em Base64
+        if (imagem.StartsWith("/9j/"))
+            return $"data:image/jpeg;base64,{imagem}";
+
+        // PNG em Base64
+        if (imagem.StartsWith("iVBOR"))
+            return $"data:image/png;base64,{imagem}";
+
+        // WEBP em Base64
+        if (imagem.StartsWith("UklGR"))
+            return $"data:image/webp;base64,{imagem}";
+
+        // GIF em Base64
+        if (imagem.StartsWith("R0lGOD"))
+            return $"data:image/gif;base64,{imagem}";
+
+        // Fallback: assume JPEG
+        return $"data:image/jpeg;base64,{imagem}";
+    }
+}
+
 @{
     ViewData["Title"] = "Meu Projeto";
 }
@@ -8,36 +42,54 @@
 
         <div class="cabecalho-meu-projeto">
             <h2>Meu Projeto</h2>
-            <p class="saudacao-cliente">Olá, @User.Identity?.Name! Aqui está o andamento do seu projeto.</p>
+
+            <p class="saudacao-cliente">
+                Olá, @User.Identity?.Name! Aqui está o andamento do seu projeto.
+            </p>
         </div>
 
         <article class="card-meu-projeto">
+
             <h1>@Model.Nome</h1>
 
             <div class="atualizacoes-projeto">
                 <h3>Últimas atualizações:</h3>
+
                 @if (!string.IsNullOrWhiteSpace(Model.Descricao))
                 {
                     <p>@Model.Descricao</p>
                 }
                 else
                 {
-                    <p class="sem-atualizacoes">Ainda não há atualizações publicadas para o seu projeto.</p>
+                    <p class="sem-atualizacoes">
+                        Ainda não há atualizações publicadas para o seu projeto.
+                    </p>
                 }
             </div>
 
-            @if (Model.Fotos.Any())
+            @if (Model.Fotos != null && Model.Fotos.Any())
             {
-                <div class="galeria-meu-projeto" id="galeriaMeuProjeto" data-nome="@Model.Nome">
+                <div class="galeria-meu-projeto"
+                     id="galeriaMeuProjeto"
+                     data-nome="@Model.Nome">
+
                     @for (var i = 0; i < Model.Fotos.Count; i++)
                     {
                         var indice = i;
-                        <button type="button" class="galeria-meu-projeto-item"
+                        var srcImagem = ObterSrcImagem(Model.Fotos[i]);
+
+                        <button type="button"
+                                class="galeria-meu-projeto-item"
                                 onclick="abrirFotoProjeto(this, @indice)"
                                 aria-label="Ampliar foto @(indice + 1) de @Model.Fotos.Count">
-                            <img src="@Model.Fotos[i]" alt="@Model.Nome - foto @(indice + 1)" loading="lazy">
+
+                            <img src="@srcImagem"
+                                 alt="@Model.Nome - foto @(indice + 1)"
+                                 loading="lazy" />
+
                         </button>
                     }
+
                 </div>
             }
             else
@@ -47,21 +99,42 @@
                     <span class="texto">Fotos em breve</span>
                 </div>
             }
+
         </article>
 
     </div>
 </div>
 
-@if (Model.Fotos.Any())
+@if (Model.Fotos != null && Model.Fotos.Any())
 {
-    <!-- Imagem ampliada (mesma do site público) -->
-    <div class="galeria-portfolio-ampliada" id="galeriaPortfolioAmpliada" onclick="fecharImagemAmpliada()">
-        <button type="button" class="galeria-portfolio-fechar-ampliada" onclick="fecharImagemAmpliada()"
-                aria-label="Fechar imagem">&times;</button>
-        <button type="button" class="galeria-portfolio-seta galeria-portfolio-seta-esquerda"
-                onclick="event.stopPropagation(); mudarImagemAmpliada(-1)" aria-label="Foto anterior">&#10094;</button>
-        <img id="galeriaPortfolioImagemAmpliada" src="" alt="">
-        <button type="button" class="galeria-portfolio-seta galeria-portfolio-seta-direita"
-                onclick="event.stopPropagation(); mudarImagemAmpliada(1)" aria-label="Próxima foto">&#10095;</button>
+    <div class="galeria-portfolio-ampliada"
+         id="galeriaPortfolioAmpliada"
+         onclick="fecharImagemAmpliada()">
+
+        <button type="button"
+                class="galeria-portfolio-fechar-ampliada"
+                onclick="event.stopPropagation(); fecharImagemAmpliada()"
+                aria-label="Fechar imagem">
+            &times;
+        </button>
+
+        <button type="button"
+                class="galeria-portfolio-seta galeria-portfolio-seta-esquerda"
+                onclick="event.stopPropagation(); mudarImagemAmpliada(-1)"
+                aria-label="Foto anterior">
+            &#10094;
+        </button>
+
+        <img id="galeriaPortfolioImagemAmpliada"
+             src=""
+             alt="Imagem ampliada do projeto" />
+
+        <button type="button"
+                class="galeria-portfolio-seta galeria-portfolio-seta-direita"
+                onclick="event.stopPropagation(); mudarImagemAmpliada(1)"
+                aria-label="Próxima foto">
+            &#10095;
+        </button>
+
     </div>
 }

@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Quetzal.Application.DTOs;
@@ -13,13 +15,14 @@ namespace Quetzal.API.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
+[Authorize(Roles = "Admin,Operador")]
 public class UsuariosController : ControllerBase
 {
     private readonly IUsuarioServico _usuarioServico;// incluido I no Usuario K 16-09
-    private readonly UserManager<ApplicationUser> _userManager; 
+    private readonly UserManager<ApplicationUser> _userManager;
 
 
-    public UsuariosController(IUsuarioServico usuarioServico , UserManager<ApplicationUser> userManager) // incluido I no Usuario k 16-09
+    public UsuariosController(IUsuarioServico usuarioServico, UserManager<ApplicationUser> userManager) // incluido I no Usuario k 16-09
     {
         _usuarioServico = usuarioServico;
         _userManager = userManager;
@@ -65,8 +68,8 @@ public class UsuariosController : ControllerBase
 
     [HttpPut("{id}")]
     public async Task<IActionResult> Atualizar(
-        string id,
-        [FromBody] UsuarioDto dto)
+     string id,
+     [FromBody] UsuarioDto dto)
     {
         var user = await _userManager.FindByIdAsync(id);
 
@@ -77,7 +80,8 @@ public class UsuariosController : ControllerBase
                     "Usuário não encontrado."));
         }
 
-        // Atualiza os dados básicos
+        // Atualiza SOMENTE os dados básicos.
+        // Os perfis/roles NÃO são alterados neste endpoint.
         user.NomeCompleto = dto.NomeCompleto;
         user.Email = dto.Email;
         user.UserName = dto.Email;
@@ -96,56 +100,8 @@ public class UsuariosController : ControllerBase
                     $"Não foi possível atualizar o usuário. {erros}"));
         }
 
-        // Atualizar os perfis (Roles)
-        if (dto.Perfis != null)
-        {
-            var perfisAtuais = await _userManager.GetRolesAsync(user);
-
-            // Remove os perfis atuais
-            if (perfisAtuais.Any())
-            {
-                var resultadoRemocao =
-                    await _userManager.RemoveFromRolesAsync(
-                        user,
-                        perfisAtuais);
-
-                if (!resultadoRemocao.Succeeded)
-                {
-                    var erros = string.Join(
-                        " | ",
-                        resultadoRemocao.Errors
-                            .Select(e => e.Description));
-
-                    return BadRequest(
-                        ApiResposta<UsuarioDto>.Falha(
-                            $"Usuário atualizado, mas não foi possível alterar os perfis. {erros}"));
-                }
-            }
-
-            // Adiciona os novos perfis
-            if (dto.Perfis.Any())
-            {
-                var resultadoPerfis =
-                    await _userManager.AddToRolesAsync(
-                        user,
-                        dto.Perfis);
-
-                if (!resultadoPerfis.Succeeded)
-                {
-                    var erros = string.Join(
-                        " | ",
-                        resultadoPerfis.Errors
-                            .Select(e => e.Description));
-
-                    return BadRequest(
-                        ApiResposta<UsuarioDto>.Falha(
-                            $"Usuário atualizado, mas não foi possível adicionar os perfis. {erros}"));
-                }
-            }
-        }
-
-        // Busca novamente os perfis atualizados
-        var perfisAtualizados =
+        // Apenas consulta os perfis existentes.
+        var perfisAtuais =
             await _userManager.GetRolesAsync(user);
 
         var usuarioAtualizado = new UsuarioDto
@@ -156,7 +112,7 @@ public class UsuariosController : ControllerBase
             Telefone = user.Telefone,
             Ativo = user.Ativo,
             DataCadastro = user.DataCadastro,
-            Perfis = perfisAtualizados.ToList()
+            Perfis = perfisAtuais.ToList()
         };
 
         return Ok(
@@ -174,7 +130,8 @@ public class UsuariosController : ControllerBase
         if (user == null)
         {
             return NotFound(
-                ApiResposta<bool>.Falha("Usuário não encontrado."));
+                ApiResposta<bool>.Falha(
+                    "Usuário não encontrado."));
         }
 
         user.Ativo = false;
@@ -183,9 +140,13 @@ public class UsuariosController : ControllerBase
 
         if (!resultado.Succeeded)
         {
+            var erros = string.Join(
+                " | ",
+                resultado.Errors.Select(e => e.Description));
+
             return BadRequest(
                 ApiResposta<bool>.Falha(
-                    "Não foi possível desativar o usuário."));
+                    $"Não foi possível desativar o usuário. {erros}"));
         }
 
         return Ok(
@@ -231,13 +192,32 @@ public class UsuariosController : ControllerBase
     public async Task<IActionResult> Ativar(string id)
     {
         var user = await _userManager.FindByIdAsync(id);
-        if (user == null) return NotFound(ApiResposta<bool>.Falha("Usuario nao encontrado."));
+
+        if (user == null)
+        {
+            return NotFound(
+                ApiResposta<bool>.Falha(
+                    "Usuário não encontrado."));
+        }
 
         user.Ativo = true;
-        await _userManager.UpdateAsync(user);
 
-        return Ok(ApiResposta<bool>.Ok(true, "Usuario ativado com sucesso."));
+        var resultado = await _userManager.UpdateAsync(user);
+
+        if (!resultado.Succeeded)
+        {
+            var erros = string.Join(
+                " | ",
+                resultado.Errors.Select(e => e.Description));
+
+            return BadRequest(
+                ApiResposta<bool>.Falha(
+                    $"Não foi possível ativar o usuário. {erros}"));
+        }
+
+        return Ok(
+            ApiResposta<bool>.Ok(
+                true,
+                "Usuário ativado com sucesso."));
     }
-
-
 }

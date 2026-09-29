@@ -39,8 +39,7 @@ namespace Quetzal.API.Controllers
                 claims: authClaims,
                 signingCredentials: new SigningCredentials(
                     authSigningKey,
-                    SecurityAlgorithms.HmacSha256)
-            );
+                    SecurityAlgorithms.HmacSha256));
         }
 
         [HttpPost("registrar")]
@@ -54,12 +53,16 @@ namespace Quetzal.API.Controllers
                     ApiResposta<object>.Falha("Já existe um usuário com este e-mail."));
             }
 
+            // Cadastro público começa INATIVO.
+            // O cliente ainda poderá fazer login e usar o site público,
+            // mas não terá acesso à Minha área até a Admin ativá-lo.
             var user = new ApplicationUser
             {
                 UserName = dto.Email,
                 Email = dto.Email,
                 NomeCompleto = dto.NomeCompleto,
-                Ativo = true,
+                Telefone = dto.Telefone,
+                Ativo = false,
                 DataCadastro = DateTime.UtcNow
             };
 
@@ -78,23 +81,24 @@ namespace Quetzal.API.Controllers
             }
 
             // Todo cadastro público recebe somente a role Cliente.
-            var roleResult = await _userManager.AddToRoleAsync(user, "Cliente");
+            var resultadoRole = await _userManager.AddToRoleAsync(user, "Cliente");
 
-            if (!roleResult.Succeeded)
+            if (!resultadoRole.Succeeded)
             {
-                var erros = roleResult.Errors
-                    .Select(e => e.Description)
-                    .ToList();
+                var erros = string.Join(
+                    "; ",
+                    resultadoRole.Errors.Select(e => e.Description)
+                );
 
-                return BadRequest(
-                    ApiResposta<object>.FalhaValidacao(
-                        erros,
-                        "Usuário criado, mas não foi possível definir o perfil Cliente."));
+                return BadRequest(new
+                {
+                    mensagem = $"Não foi possível atribuir o perfil Cliente: {erros}"
+                });
             }
 
             return StatusCode(
                 StatusCodes.Status201Created,
-                ApiResposta<object>.Ok(null!, "Usuário registrado com sucesso."));
+                ApiResposta<object>.Ok(null!, "Usuário registrado com sucesso e aguardando ativação."));
         }
 
         [HttpPost("login")]
@@ -102,28 +106,30 @@ namespace Quetzal.API.Controllers
         {
             var user = await _userManager.FindByEmailAsync(dto.Email);
 
-            if (user is null || !user.Ativo)
+            if (user is null)
             {
                 return Unauthorized(
-                    ApiResposta<LoginRespostaDto>.Falha("Usuário inválido ou inativo."));
+                    ApiResposta<LoginRespostaDto>.Falha("E-mail ou senha inválidos."));
             }
 
+            // Usuário INATIVO também pode fazer login.
+            // A restrição acontece na Minha área, não na autenticação.
             var senhaValida = await _userManager.CheckPasswordAsync(user, dto.Senha);
 
             if (!senhaValida)
             {
                 return Unauthorized(
-                    ApiResposta<LoginRespostaDto>.Falha("Senha incorreta."));
+                    ApiResposta<LoginRespostaDto>.Falha("E-mail ou senha inválidos."));
             }
 
-            // Busca os perfis verdadeiros gravados no ASP.NET Identity.
             var roles = await _userManager.GetRolesAsync(user);
 
             var authClaims = new List<Claim>
             {
                 new Claim(ClaimTypes.NameIdentifier, user.Id),
                 new Claim(ClaimTypes.Name, user.NomeCompleto),
-                new Claim(ClaimTypes.Email, user.Email!)
+                new Claim(ClaimTypes.Email, user.Email ?? string.Empty),
+                new Claim("Ativo", user.Ativo.ToString())
             };
 
             foreach (var role in roles)
@@ -135,11 +141,13 @@ namespace Quetzal.API.Controllers
 
             var resposta = new LoginRespostaDto
             {
+                UsuarioId = user.Id,
                 Token = new JwtSecurityTokenHandler().WriteToken(token),
                 Expiracao = token.ValidTo,
                 NomeUsuario = user.NomeCompleto,
-                Email = user.Email!,
-                Perfis = roles.ToList()
+                Email = user.Email ?? string.Empty,
+                Perfis = roles.ToList(),
+                Ativo = user.Ativo
             };
 
             return Ok(
@@ -147,6 +155,5 @@ namespace Quetzal.API.Controllers
                     resposta,
                     "Login realizado com sucesso."));
         }
-
     }
 }

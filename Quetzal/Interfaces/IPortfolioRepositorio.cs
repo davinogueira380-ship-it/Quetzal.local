@@ -10,6 +10,7 @@ namespace Quetzal.Domain.Interfaces
 {
     public interface IPortfolioRepositorio
     {
+        Task<bool> FotoEstaNoPortfolioAsync(int projetoCFotoId);
 
         Task<IEnumerable<Portfolio>> ObterTodosAsync(bool incluirInativos = false);
 

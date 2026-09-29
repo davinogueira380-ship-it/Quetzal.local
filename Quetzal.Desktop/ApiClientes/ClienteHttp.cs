@@ -14,7 +14,7 @@ namespace Quetzal.Desktop.ApiClientes
         // Ex.: https://seu-app-service.azurewebsites.net
         private static readonly string UrlBase =
             Environment.GetEnvironmentVariable("QUETZAL_API_BASEURL")
-            ?? "https://app-quetzal-api-gch4cgdsdnethcg6.brazilsouth-01.azurewebsites.net";
+            ?? "http://localhost:5090";
 
         // Se definir QUETZAL_HTTP_DISABLE_PROXY=1 desabilita proxy para HttpClient
         private static readonly bool DisableProxy =

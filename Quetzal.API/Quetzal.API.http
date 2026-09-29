@@ -1,4 +1,4 @@
-@Quetzal.API_HostAddress = http://localhost:5277
+@Quetzal.API_HostAddress = http://localhost:5090
 
 GET {{Quetzal.API_HostAddress}}/weatherforecast/
 Accept: application/json

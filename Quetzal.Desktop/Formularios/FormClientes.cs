@@ -79,16 +79,15 @@ namespace Quetzal.Desktop.Formularios
                 // Cria um DTO com os dados atualizados e chama a API com a assinatura correta
                 var dto = new UsuarioDto
                 {
+                    Id = _clienteSelecionadoId,
                     NomeCompleto = nome,
-                    Email = txtEmail.Text,
-                    Telefone = txtTelefone.Text,
-                    Ativo = swPerfilAtivo.Checked
+                    Email = txtEmail.Text.Trim(),
+                    Telefone = txtTelefone.Text.Trim(),
+                    Ativo = clienteAtual?.Ativo ?? false,
+                    Perfis = clienteAtual?.Perfis?.ToList() ?? new List<string>()
                 };
-                // Verifica se o status de ativação mudou
-                if (clienteAtual != null && clienteAtual.Ativo != swPerfilAtivo.Checked)
-                {
-                    await _apiUsuario.AtualizarAsync(_clienteSelecionadoId, dto);
-                }
+
+                await _apiUsuario.AtualizarAsync(_clienteSelecionadoId, dto);
                 MessageBox.Show("Dados do cliente atualizados com sucesso!" + (swPerfilAtivo.Checked ? "\nO cliente agora tem permissão para visualizar as fotos na Área do Cliente." : "\nO acesso às fotos na Área do Cliente foi bloqueado."), "Sucesso", MessageBoxButtons.OK, MessageBoxIcon.Information); await CarregarClientesAsync();
             }
             catch (Exception ex) { MessageBox.Show($"Erro ao atualizar cliente: {ex.Message}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error); }

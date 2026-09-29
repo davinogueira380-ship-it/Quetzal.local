@@ -37,6 +37,16 @@ namespace Quetzal.Infrastructure.Repositorios
                 .FirstOrDefaultAsync(p => p.Id == id);
         }
 
+        public async Task<ProjetoC?> ObterPorUsuarioIdAsync(string usuarioId)
+        {
+            return await _context.ProjetoC
+                .Include(p => p.Usuario)
+                .Include(p => p.Fotos)
+                .Where(p => p.UsuarioId == usuarioId && p.Ativo)
+                .OrderByDescending(p => p.Id)
+                .FirstOrDefaultAsync();
+        }
+
         public async Task<ProjetoC> AdicionarAsync(ProjetoC projetoC)
         {
             _context.ProjetoC.Add(projetoC);

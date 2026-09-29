@@ -6,6 +6,7 @@ namespace Quetzal.Domain.Entidades
 {
     public class PortfolioFoto
     {
+
         public int Id { get; set; }
 
         // Portfólio ao qual a foto foi selecionada

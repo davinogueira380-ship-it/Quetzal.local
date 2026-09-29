@@ -1,6 +1,6 @@
 ﻿namespace Quetzal.Desktop.UserControls
 {
-    partial class ProjetoCControl
+    partial class ProjetoCControl : System.Windows.Forms.UserControl
     {
         private System.ComponentModel.IContainer components = null;
 

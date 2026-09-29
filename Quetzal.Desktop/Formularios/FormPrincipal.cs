@@ -103,10 +103,11 @@ namespace Quetzal.Desktop
         private void btnProjetos_Click(object sender, EventArgs e)
         {
             AbrirUserControl(
-                new ProjetoCControl(),
-                " Projetos de Clientes e Galeria por Ambiente",
+                 new Quetzal.Desktop.UserControls.ProjetoCControl(),
+                     " Projetos de Clientes e Galeria por Ambiente",
                 btnProjetos
-            );
+                 );
+
         }
 
         private void btnPortfolio_Click(object sender, EventArgs e)

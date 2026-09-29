@@ -1,4 +1,37 @@
 @model ProjetoCEdicaoViewModel
+
+@functions {
+    string ObterSrcImagem(string? imagem)
+    {
+        if (string.IsNullOrWhiteSpace(imagem))
+            return "";
+
+        imagem = imagem.Trim();
+
+        if (imagem.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+            return imagem;
+
+        if (imagem.StartsWith("/9j/"))
+            return $"data:image/jpeg;base64,{imagem}";
+
+        if (imagem.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+            imagem.StartsWith("https://", StringComparison.OrdinalIgnoreCase) ||
+            imagem.StartsWith("/"))
+            return imagem;
+
+        if (imagem.StartsWith("iVBOR"))
+            return $"data:image/png;base64,{imagem}";
+
+        if (imagem.StartsWith("UklGR"))
+            return $"data:image/webp;base64,{imagem}";
+
+        if (imagem.StartsWith("R0lGOD"))
+            return $"data:image/gif;base64,{imagem}";
+
+        return imagem;
+    }
+}
+
 @{
     ViewData["Title"] = Model.TituloPagina;
 }
@@ -78,12 +111,13 @@
 
                 @foreach (var foto in Model.FotosExistentes.OrderBy(f => f.Ordem))
                 {
-                    if (Model.FotosExistentesSelecionadas.Contains(foto.Foto))
+                    if (Model.FotosExistentesSelecionadas.Contains(foto.Id))
                     {
                         <input type="hidden"
                                name="FotosExistentesSelecionadas"
-                               value="@foto.Foto"
-                               data-existing-photo-key="@($"existing-{foto.Id}-{foto.Ordem}")" />
+                               value="@foto.Id"
+                               data-existing-photo-key="@($"existing-{foto.Id}-{foto.Ordem}")"
+                               data-existing-photo-url="@ObterSrcImagem(foto.Foto)" />
                     }
                 }
 
@@ -148,7 +182,8 @@
                 'input[name="FotosExistentesSelecionadas"]'))
                 .map((input, index) => ({
                     key: input.dataset.existingPhotoKey || `existing-${index}`,
-                    url: input.value,
+                    id: Number.parseInt(input.value, 10),
+                    url: input.dataset.existingPhotoUrl || "",
                     input,
                     active: true,
                     label: `Foto ${index + 1}`
@@ -165,9 +200,9 @@
                 fotosVazias.style.display = existeFoto ? "none" : "block";
             }
 
-            function mostrarPreview(url, tipo, key) {
+            function mostrarPreview(url, tipo, key, label) {
                 selected = url && tipo && key
-                    ? { url, tipo, key }
+                    ? { url, tipo, key, label }
                     : null;
 
                 if (!selected) {
@@ -204,7 +239,7 @@
                             card.dataset.photoKey === key);
                     });
 
-                mostrarPreview(url, tipo, key);
+                mostrarPreview(url, tipo, key, label);
             }
 
             function reconstruirMenu() {

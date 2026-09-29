@@ -1,13 +1,66 @@
 @model HomeViewModel
 @using System.Text.Json
+
+@functions {
+    string ObterSrcImagem(string? imagem)
+    {
+        if (string.IsNullOrWhiteSpace(imagem))
+            return "";
+
+        imagem = imagem.Trim();
+
+        // Já está pronta
+        if (imagem.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+            return imagem;
+
+        // JPEG em Base64
+        if (imagem.StartsWith("/9j/"))
+            return $"data:image/jpeg;base64,{imagem}";
+
+        // PNG em Base64
+        if (imagem.StartsWith("iVBOR"))
+            return $"data:image/png;base64,{imagem}";
+
+        // WEBP em Base64
+        if (imagem.StartsWith("UklGR"))
+            return $"data:image/webp;base64,{imagem}";
+
+        // GIF em Base64
+        if (imagem.StartsWith("R0lGOD"))
+            return $"data:image/gif;base64,{imagem}";
+
+        // Caminho normal, por exemplo:
+        // /uploads/projetos/foto.jpg
+        // https://...
+        return imagem;
+    }
+}
+
 @{
     ViewData["Title"] = "Início";
 
-    // Fotos de um portfólio, por Ordem; cai para ImagemUpload em registros antigos.
-    List<string> FotosDoPortfolio(PortfolioViewModel p) =>
-        p.FotosSelecionadas.Any()
-            ? p.FotosSelecionadas.OrderBy(f => f.Ordem).Select(f => f.Foto).ToList()
-            : (!string.IsNullOrWhiteSpace(p.ImagemUpload) ? new List<string> { p.ImagemUpload! } : new List<string>());
+    // Retorna TODAS as fotos já no formato correto para o navegador.
+    List<string> FotosDoPortfolio(PortfolioViewModel p)
+    {
+        if (p.FotosSelecionadas != null && p.FotosSelecionadas.Any())
+        {
+            return p.FotosSelecionadas
+                .OrderBy(f => f.Ordem)
+                .Select(f => ObterSrcImagem(f.Foto))
+                .Where(f => !string.IsNullOrWhiteSpace(f))
+                .ToList();
+        }
+
+        if (!string.IsNullOrWhiteSpace(p.ImagemUpload))
+        {
+            return new List<string>
+            {
+                ObterSrcImagem(p.ImagemUpload)
+            };
+        }
+
+        return new List<string>();
+    }
 }
 @* <head>
     <link rel="stylesheet" href="~/css/site-publico.css">
@@ -254,7 +307,9 @@
 
 <section id="instagram">
     <h2>Conheça nosso Instagram</h2>
+
     <div class="container">
+
         @if (!Model.ImagensCarrossel.Any())
         {
             <div class="carrossel-placeholder">
@@ -265,20 +320,35 @@
         else
         {
             <div class="carrossel-container">
-                <button class="seta esquerda" type="button" onclick="rolarEsquerdaIndex()"
-                        aria-label="Imagem anterior">❮</button>
+
+                <button class="seta esquerda"
+                        type="button"
+                        onclick="rolarEsquerdaIndex()"
+                        aria-label="Imagem anterior">
+                    ❮
+                </button>
 
                 <div class="instagram-galeria" id="galeria">
+
                     @foreach (var imagem in Model.ImagensCarrossel)
                     {
-                        <img src="@imagem.Url" alt="@imagem.TextoAlternativo" loading="lazy">
+                        <img src="@ObterSrcImagem(imagem.Url)"
+                             alt="@imagem.TextoAlternativo"
+                             loading="lazy">
                     }
+
                 </div>
 
-                <button class="seta direita" type="button" onclick="rolarDireitaIndex()"
-                        aria-label="Próxima imagem">❯</button>
+                <button class="seta direita"
+                        type="button"
+                        onclick="rolarDireitaIndex()"
+                        aria-label="Próxima imagem">
+                    ❯
+                </button>
+
             </div>
         }
+
     </div>
 </section>
 

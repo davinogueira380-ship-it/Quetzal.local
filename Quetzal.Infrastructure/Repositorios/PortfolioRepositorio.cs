@@ -14,6 +14,15 @@ namespace Quetzal.Infrastructure.Repositorios
             _context = context;
         }
 
+        public async Task<bool> FotoEstaNoPortfolioAsync(
+            int projetoCFotoId)
+        {
+            return await _context
+                .Set<PortfolioFoto>()
+                .AnyAsync(x =>
+                    x.ProjetoCFotoId == projetoCFotoId);
+        }
+
         public async Task<IEnumerable<Portfolio>> ObterTodosAsync(
             bool incluirInativos = false)
         {

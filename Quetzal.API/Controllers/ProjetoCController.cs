@@ -1,4 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 using Quetzal.Application.DTOs;
 using Quetzal.Application.Servicos.Interfaces;
 
@@ -19,6 +22,28 @@ public class ProjetoCController : ControllerBase
     public async Task<IActionResult> ObterAtivos()
     {
         var resposta = await _projetoCServico.ObterTodosAsync(incluirInativos: false);
+        return Ok(resposta);
+    }
+
+    [HttpGet("meu")]
+    [Authorize(Roles = "Cliente,Usuario")]
+    public async Task<IActionResult> ObterMeu()
+    {
+        var usuarioId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (string.IsNullOrWhiteSpace(usuarioId))
+        {
+            return Unauthorized(
+                ApiResposta<ProjetoCDto>.Falha("Usuário autenticado sem identificador."));
+        }
+
+        var resposta = await _projetoCServico.ObterMeuAsync(usuarioId);
+
+        if (!resposta.Sucesso || resposta.Dados == null)
+        {
+            return NotFound(resposta);
+        }
+
         return Ok(resposta);
     }
 

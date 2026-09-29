@@ -11,12 +11,15 @@ namespace Quetzal.Application.Servicos.Implementacoes
     {
         private readonly IProjetoCRepositorio _repositorio;
         private readonly IMapper _mapper;
+        private readonly IPortfolioRepositorio _portfolioRepositorio;
 
         public ProjetoCServico(
             IProjetoCRepositorio repositorio,
+            IPortfolioRepositorio portfolioRepositorio,
             IMapper mapper)
         {
             _repositorio = repositorio;
+            _portfolioRepositorio = portfolioRepositorio;
             _mapper = mapper;
         }
 
@@ -70,6 +73,32 @@ namespace Quetzal.Application.Servicos.Implementacoes
             {
                 return ApiResposta<ProjetoCDto>.Falha(
                     $"Erro ao obter o projeto: {ex.Message}");
+            }
+        }
+
+        // =========================================================
+        // MEU PROJETO
+        // =========================================================
+
+        public async Task<ApiResposta<ProjetoCDto>> ObterMeuAsync(string usuarioId)
+        {
+            try
+            {
+                var projetoC = await _repositorio.ObterPorUsuarioIdAsync(usuarioId);
+
+                if (projetoC == null)
+                {
+                    return ApiResposta<ProjetoCDto>.Falha(
+                        "Nenhum projeto ativo foi vinculado a este usuário.");
+                }
+
+                var dto = _mapper.Map<ProjetoCDto>(projetoC);
+                return ApiResposta<ProjetoCDto>.Ok(dto);
+            }
+            catch (Exception ex)
+            {
+                return ApiResposta<ProjetoCDto>.Falha(
+                    $"Erro ao obter o projeto do usuário: {ex.Message}");
             }
         }
 
@@ -137,8 +166,7 @@ namespace Quetzal.Application.Servicos.Implementacoes
         // =========================================================
 
         public async Task<ApiResposta<ProjetoCDto>> AtualizarAsync(
-            int id,
-            AtualizarProjetoCDto dto)
+                 int id, AtualizarProjetoCDto dto)
         {
             try
             {
@@ -151,74 +179,137 @@ namespace Quetzal.Application.Servicos.Implementacoes
                         "Projeto do cliente não encontrado.");
                 }
 
-                // Atualiza os campos simples do projeto.
-                _mapper.Map(dto, projetoCExistente);
+                // =================================================
+                // ATUALIZA DADOS BÁSICOS
+                // =================================================
 
-                // Atualiza o usuário/cliente proprietário somente
-                // quando um UsuarioId válido for enviado.
+                projetoCExistente.NomeProjeto = dto.Nome;
+                projetoCExistente.Descricao = dto.Descricao;
+
                 if (!string.IsNullOrWhiteSpace(dto.UsuarioId))
                 {
                     projetoCExistente.UsuarioId = dto.UsuarioId;
                 }
 
-                //// =================================================
-                //// ATUALIZA AS FOTOS
-                //// =================================================
-                //// Converte novamente a List<string> recebida pelo
-                //// DTO para a coleção de ProjetoCFoto do Domain.
-                //// =================================================
-
-                //projetoCExistente.Fotos =
-                //    (dto.Fotos ?? new List<string>())
-                //    .Select((foto, indice) => new ProjetoCFoto
-                //    {
-                //        ProjetoCId = projetoCExistente.Id,
-                //        Foto = foto,
-                //        Ordem = indice + 1
-                //    })
-                //    .ToList();
+                projetoCExistente.DataAtualizacao = DateTime.UtcNow;
 
                 // =================================================
-                // ATUALIZA AS FOTOS
+                // FOTOS EXISTENTES QUE DEVEM PERMANECER
                 // =================================================
 
-                var fotosExistentes = projetoCExistente.Fotos.ToList();
+                var fotosExistentesIds =
+                    (dto.FotosExistentesIds ?? new List<int>())
+                    .Distinct()
+                    .ToHashSet();
 
-                // Remove as fotos antigas da coleção rastreada
-                foreach (var fotoExistente in fotosExistentes)
+                var fotosAtuais =
+                    projetoCExistente.Fotos
+                    .OrderBy(f => f.Ordem)
+                    .ToList();
+
+                // =================================================
+                // IDENTIFICA FOTOS QUE O USUÁRIO DESEJOU REMOVER
+                // =================================================
+
+                var fotosParaRemover =
+    fotosAtuais
+        .Where(f => !fotosExistentesIds.Contains(f.Id))
+        .ToList();
+
+                foreach (var foto in fotosParaRemover)
                 {
-                    projetoCExistente.Fotos.Remove(fotoExistente);
+                    // Verifica se esta foto está sendo utilizada
+                    // em algum Portfólio.
+                    var estaNoPortfolio =
+                        await _portfolioRepositorio
+                            .FotoEstaNoPortfolioAsync(foto.Id);
+
+                    if (estaNoPortfolio)
+                    {
+                        return ApiResposta<ProjetoCDto>.Falha(
+                            $"A foto {foto.Id} não pode ser removida porque está sendo utilizada no portfólio.");
+                    }
+
+                    // Se não está no portfólio, pode remover.
+                    projetoCExistente.Fotos.Remove(foto);
                 }
 
-                // Adiciona as novas fotos
-                var novasFotos = dto.Fotos ?? new List<string>();
+                // =================================================
+                // IMPORTANTE:
+                // NÃO APAGA AUTOMATICAMENTE FOTO QUE PODE ESTAR
+                // SENDO UTILIZADA PELO PORTFÓLIO.
+                //
+                // Por enquanto, apenas remove da coleção as fotos
+                // que não possuem Id válido/antigas não persistidas.
+                //
+                // Fotos persistidas devem ser tratadas separadamente
+                // se houver relação com PortfolioFotos.
+                // =================================================
 
-                for (int i = 0; i < novasFotos.Count; i++)
+                foreach (var foto in fotosParaRemover)
+                {
+                    // Se a foto já existe no banco, NÃO removemos aqui.
+                    // Isso evita quebrar:
+                    // PortfolioFotos.ProjetoCFotoId -> ProjetoCFotos.Id
+
+                    if (foto.Id <= 0)
+                    {
+                        projetoCExistente.Fotos.Remove(foto);
+                    }
+                }
+
+                // =================================================
+                // REORGANIZA AS FOTOS EXISTENTES
+                // =================================================
+
+                var ordem = 1;
+
+                foreach (var foto in fotosAtuais
+                    .Where(f => fotosExistentesIds.Contains(f.Id))
+                    .OrderBy(f => f.Ordem))
+                {
+                    foto.Ordem = ordem++;
+                }
+
+                // =================================================
+                // ADICIONA SOMENTE AS NOVAS FOTOS
+                // =================================================
+
+                var novasFotos =
+                    (dto.NovasFotos ?? new List<string>())
+                    .Where(f => !string.IsNullOrWhiteSpace(f))
+                    .Distinct()
+                    .ToList();
+
+                foreach (var novaFoto in novasFotos)
                 {
                     projetoCExistente.Fotos.Add(
                         new ProjetoCFoto
                         {
                             ProjetoCId = projetoCExistente.Id,
-                            Foto = novasFotos[i],
-                            Ordem = i + 1
+                            Foto = novaFoto,
+                            Ordem = ordem++
                         });
                 }
 
+                // =================================================
+                // SALVA
+                // =================================================
+
                 await _repositorio.AtualizarAsync(projetoCExistente);
 
+                // Busca novamente para garantir dados atualizados
+                var projetoAtualizado =
+                    await _repositorio.ObterPorIdAsync(id);
+
                 var projetoCDto =
-                    _mapper.Map<ProjetoCDto>(projetoCExistente);
+                    _mapper.Map<ProjetoCDto>(
+                        projetoAtualizado ?? projetoCExistente);
 
                 return ApiResposta<ProjetoCDto>.Ok(
                     projetoCDto,
                     "Projeto do cliente atualizado com sucesso.");
             }
-            //catch (Exception ex)
-            //{
-            //    return ApiResposta<ProjetoCDto>.Falha(
-            //        $"Erro ao atualizar o projeto do cliente: {ex.Message}");
-            //}
-
             catch (DbUpdateException ex)
             {
                 return ApiResposta<ProjetoCDto>.Falha(

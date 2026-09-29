@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Http;
-using Quetzal.UI.Servicos;         
-using Quetzal.UI.Infraestrutura;   
+using Quetzal.UI.Servicos;
+using Quetzal.UI.Infraestrutura;
 
 
 namespace Quetzal.UI;
@@ -38,9 +38,12 @@ public class Program
         builder.Services.AddAuthorization();
 
         // Configura o HttpClient padrao para apontar para a API
+        var apiBaseUrl = builder.Configuration["ApiConfiguracoes:UrlBase"]
+            ?? "http://localhost:5090/";
+
         builder.Services.AddHttpClient("QuetzalAPI", client =>
         {
-            client.BaseAddress = new Uri(builder.Configuration["ApiConfiguracoes:UrlBase"] ?? "https://app-quetzal-api-gch4cgdsdnethcg6.brazilsouth-01.azurewebsites.net");
+            client.BaseAddress = new Uri(apiBaseUrl);
         })
             // Ignora validacao de certificado SSL apenas para ambiente de desenvolvimento local
             .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
@@ -62,9 +65,12 @@ public class Program
 
         // Transforma status codes "secos"(404, 403...) em páginas amigáveis.
         // O {0} é substituído pelo código real. Add posteriormente!!
-       // app.UseStatusCodePagesWithReExecute("/Home/StatusCode", "?codigo={0}");
+        // app.UseStatusCodePagesWithReExecute("/Home/StatusCode", "?codigo={0}");
 
-        app.UseHttpsRedirection();
+        if (!app.Environment.IsDevelopment())
+        {
+            app.UseHttpsRedirection();
+        }
 
         // Serve arquivos estaticos (css, js, imagens de upload)
         app.UseStaticFiles();
