@@ -365,4 +365,4 @@ FodyWeavers.xsd
 /Quetzal.Desktop/UserControl/UsuarioControl.Designer.cs
 /Quetzal.Desktop/UserControl/ClienteController.cs
 
-*./appsettings.json
+appsettings.json
